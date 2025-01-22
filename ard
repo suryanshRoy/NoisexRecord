@@ -1,0 +1,129 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <EEPROM.h>
+
+const char* ssid = "ESP8266_MOD";
+const char* password = "AgriCulture";
+const char* ip_address = "192.168.4.1";
+
+int ledPin = 2; // D4
+int led = 16; //D0
+int analogPin = A0;
+const int motorPin = D1;    // Digital pin connected to the motor
+bool state = LOW;
+
+ESP8266WebServer server(80);
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  pinMode(led, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("\nSerial Begin");
+  pinMode(motorPin, OUTPUT); // Set the motor pin as an output
+  digitalWrite(motorPin, LOW);
+  delay(100);
+  digitalWrite(led, LOW);
+
+  // Connect to Wi-Fi
+  WiFi.softAP(ssid, password);
+  Serial.print("\nAP Created: ");
+  Serial.println(WiFi.softAPSSID());
+  Serial.print("\nIP Address: ");
+  Serial.println(WiFi.softAPIP());
+
+  // Define web server routes
+  server.on("/", HTTP_GET, []() {
+    server.send(200, "text/html", "<html><body>\
+      <h1>ESP8266 Web Server</h1>\
+      <p>Water Pump(Motor) Control:</p>\
+      <button onclick=\"sendData(1)\">Turn On</button>\
+      <button onclick=\"sendData(0)\">Turn Off</button>\
+      <p>Analog Value: <span id=\"analogValue\">0</span></p>\
+      <canvas id=\"gaugeCanvas\" width=\"200\" height=\"200\"></canvas>\
+      <p>Water Level: <span id=\"waterLevel\">0%</span></p>\
+      <script>\
+        function sendData(value) {\
+          var xhttp = new XMLHttpRequest();\
+          xhttp.open(\"GET\", \"/control?value=\" + value, true);\
+          xhttp.send();\
+        }\
+        setInterval(function() {\
+          var xhttp = new XMLHttpRequest();\
+          xhttp.onreadystatechange = function() {\
+            if (this.readyState == 4 && this.status == 200) {\
+              var analogValue = parseInt(this.responseText);\
+              document.getElementById(\"analogValue\").innerHTML = analogValue;\
+              drawGauge(analogValue);\
+              updateWaterLevel(analogValue);\
+            }\
+          };\
+          xhttp.open(\"GET\", \"/readAnalog\", true);\
+          xhttp.send();\
+        }, 1000);\
+        function drawGauge(value) {\
+          var canvas = document.getElementById(\"gaugeCanvas\");\
+          var context = canvas.getContext(\"2d\");\
+          context.clearRect(0, 0, canvas.width, canvas.height);\
+          context.beginPath();\
+          context.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 10, 0.8 * Math.PI, 2.2 * Math.PI);\
+          context.lineWidth = 20;\
+          context.strokeStyle = \"#009688\";\
+          context.stroke();\
+          context.beginPath();\
+          var angle = 0.8 + ((1024 - value) / 1024) * 1.4;\
+          context.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 10, 0.8 * Math.PI, angle * Math.PI);\
+          context.lineWidth = 20;\
+          context.strokeStyle = \"#FF5722\";\
+          context.stroke();\
+        }\
+        function updateWaterLevel(value) {\
+          var waterLevel = 100 - (value / 1024) * 100;\
+          document.getElementById(\"waterLevel\").innerHTML = waterLevel.toFixed(2) + \"%\";\
+        }\
+      </script>\
+    </body></html>");
+  });
+
+  // Handle LED control
+  server.on("/control", HTTP_GET, []() {
+    int value = server.arg("value").toInt();
+    digitalWrite(ledPin, !value);
+    digitalWrite(motorPin, value);
+    delay(100);
+    server.send(200, "text/plain", String(value));
+  });
+
+  // Handle reading analog value
+  server.on("/readAnalog", HTTP_GET, []() {
+    int analogValue = analogRead(analogPin);
+    server.send(200, "text/plain", String(analogValue));
+    delay(100);
+  });
+
+  // Start server
+  server.begin();
+  Serial.println("Server started");
+}
+
+void loop() {
+  server.handleClient();
+  {
+  int sensorval = analogRead(analogPin);
+  if (sensorval <= 1024 && sensorval > 700 && state == LOW) {
+    digitalWrite(ledPin, LOW);
+    state = HIGH;
+    Serial.println("Sensor value is greater than 768");
+    digitalWrite(led, LOW);
+    digitalWrite(motorPin, HIGH); // Turn on the motor if the analog value is less than 720
+    delay(200);
+  } 
+  else if (sensorval < 700 && state == HIGH) {
+    digitalWrite(ledPin, LOW);  // Turn off the motor if the analog value is greater than or equal to 720
+    state = LOW;
+    Serial.println("Sensor value is less than 768");
+    digitalWrite(led, HIGH);
+    digitalWrite(motorPin, LOW);  // Turn off the motor if the analog value is greater than or equal to 720
+    delay(200);
+  }
+  } delay(100);
+}
