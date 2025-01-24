@@ -1,3 +1,11 @@
+// Created by Suryansh Roy
+// For settings mode go to 192.168.4.2/config 
+// For Main web page go to 192.168.4.1
+// Connect to the new free wifi when in config mode 
+// Maximum time given in configuration mode is 80 seconds for any change that is wanted
+// Connections with MIC(INMP441): GPIO 14 -> SCK, GPIO 15 -> WS, GPIO 32 -> SD, 3.3V -> VDD, GND -> GND
+// Connection with reset button: GPIO -> 33 with switch and LOW(GND) for ON state of config mode and normally in OFF state, maximum press time 5 seconds
+
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
