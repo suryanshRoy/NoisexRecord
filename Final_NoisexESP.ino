@@ -1,6 +1,7 @@
-// Created by Suryansh Roy
+// Created by Suryansh Roy, Ayush Singh, Adarsh, Rishav Ranjan
 // For settings mode go to 192.168.4.2/config 
 // For Main web page go to 192.168.4.1
+// Default password is 123456789
 // Connect to the new free wifi when in config mode 
 // Maximum time given in configuration mode is 80 seconds for any change that is wanted
 // Connections with MIC(INMP441): GPIO 14 -> SCK, GPIO 15 -> WS, GPIO 32 -> SD, 3.3V -> VDD, GND -> GND
