@@ -101,6 +101,17 @@ void savePreferences() {
     preferences.end();
 }
 
+void blinkLED(int durationInSeconds, int blinkRateMs) {
+    int totalBlinks = (durationInSeconds * 1000) / (blinkRateMs); // Calculate total blinks based on duration and rate
+
+    for (int i = 0; i < totalBlinks; i++) {
+        digitalWrite(Built_in_led, HIGH); // Turn the LED on
+        delay(blinkRateMs);          // Wait for the blink rate duration
+        digitalWrite(Built_in_led, LOW);  // Turn the LED off
+        delay(blinkRateMs);          // Wait for the blink rate duration
+    }
+}
+
 // Handle main root request
 void handleRoot() {
   String noiseMessage;
@@ -300,6 +311,8 @@ void handleWiFiSettings() {
 
 // Handle form submission for new credentials
 void handleSetCredentials() {
+    blinkLED(3, 1000);
+    delay(1000);
     if (server.hasArg("ssid") && server.hasArg("password") && server.hasArg("highNoise")) {
         String new_ssid = server.arg("ssid");
         String new_password = server.arg("password");
@@ -317,8 +330,12 @@ void handleSetCredentials() {
             savePreferences();
         }
 
-        server.send(200, "text/html", "<h1>Settings Saved. Restarting... after timeout of 80 seconds from starting of Configuration mode.</h1>");
+        server.send(200, "text/html", "<h1>Settings Saved. Restarting... after timeout of 80 seconds from starting of Configuration mode. "
+                              "You will notice led blinking after saving it for 4 times while during restart period you will notice blinking "
+                              "for 3 times at interval of 1 second and new Wifi will get formed! </h1>");
         delay(1000);
+        blinkLED(2, 500);
+        delay(2000);
     } else {
         server.send(400, "text/html", "<h1>Invalid Input</h1>");
     }
@@ -484,7 +501,8 @@ void core_0_loop(void *pvParameters) {
             checkResetButton();
         } else if (millis() - configStartTime >= 80000) {
             //Serial.println("Configuration mode timed out. Restarting...");
-            delay(1000);
+            blinkLED(3, 1000);
+            delay(3000);
             ESP.restart();
         }
         vTaskDelay(pdMS_TO_TICKS(50)); // Yield time to other tasks
